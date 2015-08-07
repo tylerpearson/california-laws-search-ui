@@ -3,24 +3,33 @@ var Search = React.createClass({displayName: "Search",
     getInitialState: function() {
         return {
             searchQuery: "",
-            searchResults: []
+            searchResults: [],
+            runningSearch: null
         }
     },
     componentDidMount: function() {
         this.setState({searchQuery: this.getSearchParameterValue()}, function() {
-            if (this.state.searchQuery.length) {
+            if (this.state.searchQuery && this.state.searchQuery.length) {
                 this.getResults();
             }
         });
     },
     getResults: function() {
-        $.get(this.props.source + '/' + this.state.searchQuery, function(results) {
-            var sections = results.sections;
+        if (this.state.runningSearch) {
+            this.state.runningSearch.abort();
+        }
 
-            if (this.isMounted() && sections.length) {
-                this.setState({searchResults: sections})
-            }
-        }.bind(this));
+        this.setState({runningSearch: null});
+
+        var search = $.get(this.props.source + '/' + this.state.searchQuery, function(results) {
+                var sections = results.sections;
+
+                if (this.isMounted() && sections.length) {
+                    this.setState({searchResults: sections})
+                }
+            }.bind(this));
+
+        this.setState({runningSearch: search});
     },
     getSearchParameterValue: function() {
         if (window.location.search) {
@@ -32,17 +41,22 @@ var Search = React.createClass({displayName: "Search",
         }
     },
     updateSearchParam: function(query) {
-         history.replaceState(null, query, window.location.origin + "?search=" + query);
+        if (query.length) {
+            history.replaceState(null, query, window.location.origin + "?search=" + query);
+        } else {
+            history.replaceState(null, query, window.location.origin);
+        }
     },
     onSearchUpdate: function() {
         var query = this.refs.searchInput.getDOMNode().value;
 
-        if (query && query.length) {
-           this.getResults(query);
-        }
+        this.setState({searchQuery: query}, function() {
+            if (query && query.length) {
+               this.getResults();
+            }
 
-        this.setState({searchQuery: query});
-        this.updateSearchParam(query);
+            this.updateSearchParam(query);
+        });
     },
     render: function() {
         if (this.state.searchResults.length) {
@@ -50,9 +64,11 @@ var Search = React.createClass({displayName: "Search",
         }
 
         return (
-            React.createElement("div", {className: "search-form"}, 
-                React.createElement("h1", null, "This is the search"), 
-                React.createElement("input", {type: "search", ref: "searchInput", onChange:  this.onSearchUpdate, value:  this.state.searchQuery}), 
+            React.createElement("div", {className: "search-wrap"}, 
+                React.createElement("h1", {className: "search-title"}, "Hi, I am the title"), 
+                React.createElement("form", {className: "search-form"}, 
+                    React.createElement("input", {className: "search-input", type: "search", placeholder: "Search for something...", ref: "searchInput", onChange:  this.onSearchUpdate, value:  this.state.searchQuery})
+                ), 
                 searchResults
             )
         )
@@ -78,8 +94,10 @@ var SearchResults = React.createClass({displayName: "SearchResults",
 
 
         return (
-            React.createElement("ul", null, 
-                results
+            React.createElement("div", {className: "search-results"}, 
+                React.createElement("ul", null, 
+                    results
+                )
             )
         )
     }
