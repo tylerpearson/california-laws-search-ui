@@ -4,10 +4,14 @@ In development.
 
 ## Development
 
+## Gulp
+
+`gulp`
+
 ### Sass
 
 `sass --watch src/sass/main.scss:dist/css/main.css --style compressed`
 
-### React compilation
+### Minify JS
 
-`jsx --watch src/react/ dist/js/`
+`uglifyjs --compress --mangle -- index.js > index.min.js`
