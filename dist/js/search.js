@@ -1,16 +1,20 @@
 var Search = React.createClass({displayName: "Search",
 
+    documentTitle: "California laws search",
+
     getInitialState: function() {
         return {
             searchQuery: "",
             searchResults: [],
-            runningSearch: null
+            runningSearch: null,
+            searching: false
         }
     },
     componentDidMount: function() {
         this.setState({searchQuery: this.getSearchParameterValue()}, function() {
             if (this.state.searchQuery && this.state.searchQuery.length) {
                 this.getResults();
+                document.title = this.state.searchQuery + " - " + this.documentTitle;
             }
         });
     },
@@ -19,13 +23,13 @@ var Search = React.createClass({displayName: "Search",
             this.state.runningSearch.abort();
         }
 
-        this.setState({runningSearch: null});
+        this.setState({runningSearch: null, searching: true});
 
-        var search = $.get(this.props.source + '/' + this.state.searchQuery, function(results) {
+        var search = $.get(this.props.source + '/' + this.state.searchQuery.toLowerCase(), function(results) {
                 var sections = results.sections;
 
-                if (this.isMounted() && sections.length) {
-                    this.setState({searchResults: sections})
+                if (this.isMounted()) {
+                    this.setState({searchResults: sections, searching: false})
                 }
             }.bind(this));
 
@@ -43,8 +47,10 @@ var Search = React.createClass({displayName: "Search",
     updateSearchParam: function(query) {
         if (query.length) {
             history.replaceState(null, query, window.location.origin + "?search=" + query);
+            document.title = query + " -  " + this.documentTitle;
         } else {
             history.replaceState(null, query, window.location.origin);
+            document.title = "California laws search"
         }
     },
     onSearchUpdate: function() {
@@ -59,45 +65,67 @@ var Search = React.createClass({displayName: "Search",
         });
     },
     render: function() {
-        if (this.state.searchResults.length) {
-            var searchResults = (React.createElement(SearchResults, {results:  this.state.searchResults}));
-        }
-
         return (
-            React.createElement("div", {className: "search-wrap"}, 
-                React.createElement("h1", {className: "search-title"}, "Hi, I am the title"), 
-                React.createElement("form", {className: "search-form"}, 
-                    React.createElement("input", {className: "search-input", type: "search", placeholder: "Search for something...", ref: "searchInput", onChange:  this.onSearchUpdate, value:  this.state.searchQuery})
+            React.createElement("div", null, 
+                React.createElement("header", {className: "header"}, 
+                    React.createElement("p", {className: "search-prompt"}, "I want to search California laws for:"), 
+                    React.createElement("form", {className: "search-form"}, 
+                        React.createElement("input", {className: "search-input", type: "search", placeholder: "Search California state laws...", ref: "searchInput", onChange:  this.onSearchUpdate, value:  this.state.searchQuery})
+                    )
                 ), 
-                searchResults
+
+                React.createElement("div", {className: "container"}, 
+                    React.createElement("div", {className: "search-wrap"}, 
+                        React.createElement(SearchResultsList, {searchQuery: this.state.searchQuery, results:  this.state.searchResults, searching: this.state.searching})
+                    )
+                )
             )
         )
     }
 
 });
 
-var SearchResults = React.createClass({displayName: "SearchResults",
+var SearchResultsList = React.createClass({displayName: "SearchResultsList",
     render: function() {
-        var results = this.props.results.map(function(result, index) {
-            var formattedResult = [];
+        if (this.props.results.length) {
+            var results = this.props.results.map(function(result, index) {
+                return (
+                    React.createElement("li", {key: index}, 
+                        React.createElement(SearchResult, {content: result.content, history: result.history, id: result.id})
+                    )
+                )
 
-            for (var prop in result) {
-                if (result.hasOwnProperty(prop)) {
-                    formattedResult.push("<p><strong>" + prop + "</strong> " + result[prop])
-                }
+            }, this)
+        } else {
+            if (this.props.searching) {
+                 return (React.createElement("li", {className: "searching-info", key: "1"}, "Searching for \"", this.props.searchQuery, "\"..."))
+            } else {
+                return (React.createElement("li", {className: "searching-info", key: "1"}, "No results for \"", this.props.searchQuery, "\""))
             }
-
-            return (
-                React.createElement("li", {key: index}, formattedResult.join(''))
-            )
-        }, this)
-
+        }
 
         return (
             React.createElement("div", {className: "search-results"}, 
                 React.createElement("ul", null, 
                     results
                 )
+            )
+        )
+    }
+
+});
+
+
+var SearchResult = React.createClass({displayName: "SearchResult",
+
+    render: function() {
+        var codeLink = "https://api.calilaws.com/v1/sections/" + this.props.id;
+
+        return (
+            React.createElement("section", {className: "search-result-wrap"}, 
+                React.createElement("p", {className: "result-meta"}, React.createElement("a", {href: codeLink, target: "_blank"}, this.props.id)), 
+                React.createElement("p", null, this.props.content), 
+                React.createElement("p", {className: "result-history"}, this.props.history)
             )
         )
     }
