@@ -14,7 +14,7 @@ class SearchResultsList extends React.Component {
             }, this)
         } else {
             if (this.props.searching) {
-                 return (<li className="searching-info" key="1">Searching for "{this.props.searchQuery}"...</li>)
+                 return (<li className="searching-info" key="1">Searching the state code for {this.props.searchQuery}...</li>)
             } else {
                 return (<li className="searching-info" key="1">No results for "{this.props.searchQuery}"</li>)
             }
